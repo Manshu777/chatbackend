@@ -17,13 +17,13 @@ const crypto = require('crypto');
 
 
 
-const port = 9000 || process.env.PORT;
+const port = process.env.PORT || 9000;
 
 const app = express();
 const server = http.createServer(app);
 const io = socket(server, {
   cors: {
-    origin: 'https://chitchatchits.netlify.app/', // Replace with your frontend's origin
+    origin: 'http://localhost:3000', // Replace with your frontend's origin
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -33,7 +33,7 @@ const io = socket(server, {
 
 
 const corsOptions = {
-  origin: 'https://chitchatchits.netlify.app/',
+  origin: 'http://localhost:3000',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204,
@@ -53,15 +53,14 @@ const Messages = require('./schema/messageModel.js');
 
 
 
-const secretKey = process.env.SCRETKEY;
+const secretKey = process.env.SCRETKEY || "fwnlfbwlfvdwedfn";
 
 
 
-mongoose.connect(process.env.MONGODB, {
+mongoose.connect(process.env.MONGOLINK, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
-
 
 
 
@@ -149,7 +148,11 @@ io.on("connection", (socket) => {
 app.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email });
+
+    console.log(user);
+
 
     if (!user)
       return res.status(404).json({ msg: 'User not found', status: false });
@@ -231,17 +234,36 @@ app.post('/messages', async (req, res,next) => {
 app.post('/signup', upload.single('profileImage'), async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const profileImage = req.file.filename;
+
+    
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    const profileImage = req.file ? req.file.filename : null;
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({ username, email, password: hashedPassword,  profileImage });
+    const newUser = new User({ username, email, password: hashedPassword, profileImage });
     await newUser.save();
+
     const token = jwt.sign({ userId: newUser._id }, secretKey, { expiresIn: '1h' });
 
-    res.status(201).json({ message: 'User created successfully', token ,newUser});
+    res.status(201).json({ message: 'User created successfully', token, newUser });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+   
+
+    if (error instanceof multer.MulterError) {
+      // Multer-related error
+      res.status(400).json({ error: 'File upload error' });
+    } else if (error.message === 'Invalid file type. Only images are allowed.') {
+      // Invalid file type error
+      res.status(400).json({ error: error.message });
+    } else {
+      // Other errors
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
   }
 });
 
