@@ -23,7 +23,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socket(server, {
   cors: {
-    origin: 'http://localhost:3000', // Replace with your frontend's origin
+    origin: 'https://chatfrontend-two.vercel.app', // Replace with your frontend's origin
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -33,7 +33,7 @@ const io = socket(server, {
 
 
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: 'https://chatfrontend-two.vercel.app',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204,
